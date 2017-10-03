@@ -1,5 +1,6 @@
 const bodyParser = require('body-parser');
 const express = require('express');
+const session = require('express-session');
 
 const Post = require('./post.js');
 
@@ -8,6 +9,13 @@ const STATUS_USER_ERROR = 422;
 const server = express();
 // to enable parsing of json bodies for post requests
 server.use(bodyParser.json());
+
+
+server.use(session({
+	secret: 'ksfalkdsjflkasdjfvklasjdflkajdsfksldflkasdjflsdaj' 
+})); // long random string
+
+
 
 const sendUserError = (err, res) => {
   res.status(STATUS_USER_ERROR);
@@ -28,12 +36,25 @@ const queryAndThen = (query, res, cb) => {
   });
 };
 
-server.get('/accepted-answer/:soID', (req, res) => {
+
+const findSoID = (req, res, next) => {
   queryAndThen(Post.findOne({ soID: req.params.soID }), res, (post) => {
     if (!post) {
-      sendUserError("Couldn't find post with given ID", res);
+      res.status(STATUS_USER_ERROR);
+      res.json({ error: 'Couldn\'t find post with given ID' });
       return;
     }
+    req.post = post;
+    next();
+  });
+};
+
+server.get('/accepted-answer/:soID', findSoID, (req, res) => {
+  // queryAndThen(Post.findOne({ soID: req.params.soID }), res, (post) => {
+  //   if (!post) {
+  //     sendUserError("Couldn't find post with given ID", res);
+  //     return;
+  //   }
 
     const query = Post.findOne({ soID: post.acceptedAnswerID });
     queryAndThen(query, res, (answer) => {
@@ -43,15 +64,15 @@ server.get('/accepted-answer/:soID', (req, res) => {
         res.json(answer);
       }
     });
-  });
+  // });
 });
 
-server.get('/top-answer/:soID', (req, res) => {
-  queryAndThen(Post.findOne({ soID: req.params.soID }), res, (post) => {
-    if (!post) {
-      sendUserError("Couldn't find post with given ID", res);
-      return;
-    }
+server.get('/top-answer/:soID', findSoID, (req, res) => {
+  // queryAndThen(Post.findOne({ soID: req.params.soID }), res, (post) => {
+  //   if (!post) {
+  //     sendUserError("Couldn't find post with given ID", res);
+  //     return;
+  //   }
 
     const query = Post
       .findOne({
@@ -67,7 +88,7 @@ server.get('/top-answer/:soID', (req, res) => {
         res.json(answer);
       }
     });
-  });
+  // });
 });
 
 server.get('/popular-jquery-questions', (req, res) => {
